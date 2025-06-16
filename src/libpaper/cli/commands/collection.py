@@ -1,4 +1,3 @@
-import asyncio
 from typing import Optional
 
 import click
@@ -27,36 +26,32 @@ def create(
     ctx: click.Context, name: str, description: Optional[str], parent: Optional[str]
 ):
     """创建新分类"""
+    config = ctx.obj["config"]
+    service = CollectionService(config)
 
-    async def _create():
-        config = ctx.obj["config"]
-        service = CollectionService(config)
+    try:
+        service.initialize()
 
-        try:
-            await service.initialize()
+        # 解析父分类ID
+        parent_id = parse_uuid(parent) if parent else None
 
-            # 解析父分类ID
-            parent_id = parse_uuid(parent) if parent else None
+        # 创建分类
+        collection = service.create_collection(
+            name=name, description=description, parent_id=parent_id
+        )
 
-            # 创建分类
-            collection = await service.create_collection(
-                name=name, description=description, parent_id=parent_id
-            )
+        console.print(f"[green]✓ 分类创建成功[/green]")
+        console.print(f"ID: {collection.id}")
+        console.print(f"名称: {collection.name}")
+        if collection.description:
+            console.print(f"描述: {collection.description}")
 
-            console.print(f"[green]✓ 分类创建成功[/green]")
-            console.print(f"ID: {collection.id}")
-            console.print(f"名称: {collection.name}")
-            if collection.description:
-                console.print(f"描述: {collection.description}")
-
-        except ValueError as e:
-            console.print(f"[red]错误: {e}[/red]")
-        except Exception as e:
-            console.print(f"[red]创建失败: {e}[/red]")
-        finally:
-            await service.close()
-
-    asyncio.run(_create())
+    except ValueError as e:
+        console.print(f"[red]错误: {e}[/red]")
+    except Exception as e:
+        console.print(f"[red]创建失败: {e}[/red]")
+    finally:
+        service.close()
 
 
 @collection_commands.command()
@@ -64,80 +59,76 @@ def create(
 @click.pass_context
 def list(ctx: click.Context, tree: bool):
     """列出所有分类"""
+    config = ctx.obj["config"]
+    service = CollectionService(config)
 
-    async def _list():
-        config = ctx.obj["config"]
-        service = CollectionService(config)
+    try:
+        service.initialize()
 
-        try:
-            await service.initialize()
+        collections = service.list_collections()
 
-            collections = await service.list_collections()
+        if not collections:
+            console.print("[yellow]没有找到分类[/yellow]")
+            return
 
-            if not collections:
-                console.print("[yellow]没有找到分类[/yellow]")
-                return
+        if tree:
+            # 树形显示
+            console.print("[blue]分类结构[/blue]")
 
-            if tree:
-                # 树形显示
-                console.print("[blue]分类结构[/blue]")
+            root_collections = service.get_root_collections()
+            tree_display = Tree("分类")
 
-                root_collections = await service.get_root_collections()
-                tree_display = Tree("分类")
+            def add_collection_to_tree(parent_node, collection):
+                node_text = f"{collection.name}"
+                if collection.description:
+                    node_text += f" ({collection.description})"
 
-                async def add_collection_to_tree(parent_node, collection):
-                    node_text = f"{collection.name}"
-                    if collection.description:
-                        node_text += f" ({collection.description})"
+                node = parent_node.add(node_text)
 
-                    node = parent_node.add(node_text)
+                # 添加子分类
+                children = service.get_child_collections(collection.id)
+                for child in children:
+                    add_collection_to_tree(node, child)
 
-                    # 添加子分类
-                    children = await service.get_child_collections(collection.id)
-                    for child in children:
-                        await add_collection_to_tree(node, child)
+            for root_collection in root_collections:
+                add_collection_to_tree(tree_display, root_collection)
 
-                for root_collection in root_collections:
-                    await add_collection_to_tree(tree_display, root_collection)
+            console.print(tree_display)
 
-                console.print(tree_display)
+        else:
+            # 表格显示
+            console.print(f"[blue]所有分类 ({len(collections)} 个)[/blue]")
 
-            else:
-                # 表格显示
-                console.print(f"[blue]所有分类 ({len(collections)} 个)[/blue]")
+            table = Table(show_header=True, header_style="bold magenta")
+            table.add_column("ID", style="dim", width=8)
+            table.add_column("名称", min_width=15)
+            table.add_column("描述", min_width=20)
+            table.add_column("父分类", width=15)
+            table.add_column("文献数", width=8, justify="right")
 
-                table = Table(show_header=True, header_style="bold magenta")
-                table.add_column("ID", style="dim", width=8)
-                table.add_column("名称", min_width=15)
-                table.add_column("描述", min_width=20)
-                table.add_column("父分类", width=15)
-                table.add_column("文献数", width=8, justify="right")
+            for collection in collections:
+                short_id = str(collection.id)[:8]
+                name = collection.name
+                description = truncate_text(collection.description, 30)
 
-                for collection in collections:
-                    short_id = str(collection.id)[:8]
-                    name = collection.name
-                    description = truncate_text(collection.description, 30)
+                # 查找父分类名称
+                parent_name = "-"
+                if collection.parent_id:
+                    for c in collections:
+                        if c.id == collection.parent_id:
+                            parent_name = c.name
+                            break
 
-                    # 查找父分类名称
-                    parent_name = "-"
-                    if collection.parent_id:
-                        for c in collections:
-                            if c.id == collection.parent_id:
-                                parent_name = c.name
-                                break
+                paper_count = str(collection.paper_count)
 
-                    paper_count = str(collection.paper_count)
+                table.add_row(short_id, name, description, parent_name, paper_count)
 
-                    table.add_row(short_id, name, description, parent_name, paper_count)
+            console.print(table)
 
-                console.print(table)
-
-        except Exception as e:
-            console.print(f"[red]查询失败: {e}[/red]")
-        finally:
-            await service.close()
-
-    asyncio.run(_list())
+    except Exception as e:
+        console.print(f"[red]查询失败: {e}[/red]")
+    finally:
+        service.close()
 
 
 @collection_commands.command()
@@ -154,40 +145,36 @@ def update(
     parent: Optional[str],
 ):
     """更新分类信息"""
+    config = ctx.obj["config"]
+    service = CollectionService(config)
 
-    async def _update():
-        config = ctx.obj["config"]
-        service = CollectionService(config)
+    try:
+        service.initialize()
 
-        try:
-            await service.initialize()
+        # 解析ID
+        collection_uuid = parse_uuid(collection_id)
+        parent_id = parse_uuid(parent) if parent else None
 
-            # 解析ID
-            collection_uuid = parse_uuid(collection_id)
-            parent_id = parse_uuid(parent) if parent else None
+        # 更新分类
+        updated_collection = service.update_collection(
+            collection_id=collection_uuid,
+            name=name,
+            description=description,
+            parent_id=parent_id,
+        )
 
-            # 更新分类
-            updated_collection = await service.update_collection(
-                collection_id=collection_uuid,
-                name=name,
-                description=description,
-                parent_id=parent_id,
-            )
+        if updated_collection:
+            console.print(f"[green]✓ 分类更新成功[/green]")
+            console.print(f"名称: {updated_collection.name}")
+        else:
+            console.print(f"[red]分类不存在: {collection_id}[/red]")
 
-            if updated_collection:
-                console.print(f"[green]✓ 分类更新成功[/green]")
-                console.print(f"名称: {updated_collection.name}")
-            else:
-                console.print(f"[red]分类不存在: {collection_id}[/red]")
-
-        except ValueError as e:
-            console.print(f"[red]错误: {e}[/red]")
-        except Exception as e:
-            console.print(f"[red]更新失败: {e}[/red]")
-        finally:
-            await service.close()
-
-    asyncio.run(_update())
+    except ValueError as e:
+        console.print(f"[red]错误: {e}[/red]")
+    except Exception as e:
+        console.print(f"[red]更新失败: {e}[/red]")
+    finally:
+        service.close()
 
 
 @collection_commands.command()
@@ -196,30 +183,26 @@ def update(
 @click.pass_context
 def delete(ctx: click.Context, collection_id: str):
     """删除分类"""
+    config = ctx.obj["config"]
+    service = CollectionService(config)
 
-    async def _delete():
-        config = ctx.obj["config"]
-        service = CollectionService(config)
+    try:
+        service.initialize()
 
-        try:
-            await service.initialize()
+        # 解析ID
+        collection_uuid = parse_uuid(collection_id)
 
-            # 解析ID
-            collection_uuid = parse_uuid(collection_id)
+        # 删除分类
+        success = service.delete_collection(collection_uuid)
 
-            # 删除分类
-            success = await service.delete_collection(collection_uuid)
+        if success:
+            console.print(f"[green]✓ 分类删除成功[/green]")
+        else:
+            console.print(f"[red]分类不存在: {collection_id}[/red]")
 
-            if success:
-                console.print(f"[green]✓ 分类删除成功[/green]")
-            else:
-                console.print(f"[red]分类不存在: {collection_id}[/red]")
-
-        except ValueError as e:
-            console.print(f"[red]错误: {e}[/red]")
-        except Exception as e:
-            console.print(f"[red]删除失败: {e}[/red]")
-        finally:
-            await service.close()
-
-    asyncio.run(_delete())
+    except ValueError as e:
+        console.print(f"[red]错误: {e}[/red]")
+    except Exception as e:
+        console.print(f"[red]删除失败: {e}[/red]")
+    finally:
+        service.close()
