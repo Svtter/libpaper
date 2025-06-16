@@ -1,15 +1,29 @@
-from sqlmodel import SQLModel, Field, Relationship
-from datetime import datetime
-from typing import Optional, List
-import re
+from __future__ import annotations
+
 import json
+import re
+from datetime import datetime
+from typing import TYPE_CHECKING, List, Optional
+
+from sqlalchemy.orm import Mapped
+from sqlmodel import Field, Relationship, SQLModel
+
+if TYPE_CHECKING:
+    from .paper import Paper, PaperTagLink
 
 
 class Tag(SQLModel, table=True):
     """标签模型"""
+
     __tablename__ = "tags"
 
-    name: str = Field(..., min_length=1, max_length=50, primary_key=True, description="标签名称，作为主键")
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        primary_key=True,
+        description="标签名称，作为主键",
+    )
     description: Optional[str] = Field(None, max_length=200, description="标签描述")
     color: Optional[str] = Field(None, description="标签颜色（十六进制格式）")
 
@@ -17,10 +31,7 @@ class Tag(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now, description="创建时间")
 
     # 关系
-    papers: List["Paper"] = Relationship(
-        back_populates="tags",
-        link_model="PaperTagLink"
-    )
+    papers: Mapped[List["Paper"]] = Relationship(back_populates="tags")
 
     @property
     def paper_count(self) -> int:
@@ -31,13 +42,13 @@ class Tag(SQLModel, table=True):
         """验证标签名称"""
         name = self.name.strip().lower()  # 标签名称统一小写
         if not name:
-            raise ValueError('标签名称不能为空')
+            raise ValueError("标签名称不能为空")
         if len(name) > 50:
-            raise ValueError('标签名称长度不能超过50个字符')
+            raise ValueError("标签名称长度不能超过50个字符")
 
         # 标签名称只能包含字母、数字、中文、连字符和下划线
-        if not re.match(r'^[\w\u4e00-\u9fff-]+$', name):
-            raise ValueError('标签名称只能包含字母、数字、中文、连字符和下划线')
+        if not re.match(r"^[\w\u4e00-\u9fff-]+$", name):
+            raise ValueError("标签名称只能包含字母、数字、中文、连字符和下划线")
 
         self.name = name
 
@@ -47,11 +58,11 @@ class Tag(SQLModel, table=True):
             return
 
         # 移除可能的 # 前缀
-        color = self.color.lstrip('#')
+        color = self.color.lstrip("#")
 
         # 验证十六进制颜色格式
-        if not re.match(r'^[0-9A-Fa-f]{6}$', color):
-            raise ValueError('颜色必须是6位十六进制格式（如：FF5722）')
+        if not re.match(r"^[0-9A-Fa-f]{6}$", color):
+            raise ValueError("颜色必须是6位十六进制格式（如：FF5722）")
 
         self.color = f"#{color.upper()}"
 
@@ -60,7 +71,7 @@ class Tag(SQLModel, table=True):
         if self.description is not None:
             description = self.description.strip()
             if len(description) > 200:
-                raise ValueError('标签描述长度不能超过200个字符')
+                raise ValueError("标签描述长度不能超过200个字符")
             self.description = description if description else None
 
     def model_post_init(self, __context) -> None:
@@ -76,7 +87,7 @@ class Tag(SQLModel, table=True):
             "description": self.description,
             "color": self.color,
             "paper_count": self.paper_count,
-            "created_at": self.created_at.isoformat()
+            "created_at": self.created_at.isoformat(),
         }
 
     def to_json(self) -> str:
@@ -84,19 +95,19 @@ class Tag(SQLModel, table=True):
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'Tag':
+    def from_dict(cls, data: dict) -> "Tag":
         """从字典创建 Tag 实例"""
         # 处理特殊字段
-        if 'created_at' in data and isinstance(data['created_at'], str):
-            data['created_at'] = datetime.fromisoformat(data['created_at'])
+        if "created_at" in data and isinstance(data["created_at"], str):
+            data["created_at"] = datetime.fromisoformat(data["created_at"])
 
         # 移除不是模型字段的数据
-        model_data = {k: v for k, v in data.items() if k != 'paper_count'}
+        model_data = {k: v for k, v in data.items() if k != "paper_count"}
 
         return cls(**model_data)
 
     @classmethod
-    def from_json(cls, json_str: str) -> 'Tag':
+    def from_json(cls, json_str: str) -> "Tag":
         """从 JSON 字符串创建 Tag 实例"""
         data = json.loads(json_str)
         return cls.from_dict(data)
