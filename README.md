@@ -4,6 +4,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Status](https://img.shields.io/badge/status-beta-orange.svg)](#)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 ## Overview
