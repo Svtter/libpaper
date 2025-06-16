@@ -1,0 +1,6 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+Python 方法的代码将会自动生成 api 文档，通过 mkdocstrings
