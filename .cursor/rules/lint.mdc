@@ -1,0 +1,6 @@
+---
+description:
+globs: *.py
+alwaysApply: false
+---
+Python code indent with 2 spaces.
