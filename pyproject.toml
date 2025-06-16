@@ -22,3 +22,8 @@ libpaper = "libpaper.cli:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "mkdocstrings>=0.29.1",
+]
