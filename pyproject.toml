@@ -1,0 +1,9 @@
+[project]
+name = "libpaper"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "supabase>=2.15.3",
+]
