@@ -1,0 +1,7 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+尽可能不依赖外部的服务，允许用户在本地自行搭建。
