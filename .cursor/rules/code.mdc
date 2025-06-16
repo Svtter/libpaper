@@ -1,0 +1,11 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+# IMPORTANT:
+# Always read docs/docs/architecture.md before writing any code. Include entire database schema.
+# Always read docs/docs/design.md before writing any code.
+# Always read docs/docs/devplan.md before writing any code.
+# After adding a major feature or completing a milestone, update docs/docs/architecture.md.
