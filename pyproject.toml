@@ -1,9 +1,22 @@
 [project]
 name = "libpaper"
 version = "0.1.0"
-description = "Add your description here"
+description = "A headless library for research paper management"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "supabase>=2.15.3",
+    "click>=8.1.0",
+    "pydantic>=2.0.0",
+    "aiofiles>=23.0.0",
+    "python-dotenv>=1.0.0",
+    "rich>=13.0.0",
+    "pypdf>=3.0.0",
 ]
+
+[project.scripts]
+libpaper = "libpaper.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
