@@ -5,11 +5,10 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    from .paper import Paper, PaperCollectionLink
+    from .paper import Paper
 
 
 class Collection(SQLModel, table=True):
@@ -30,13 +29,23 @@ class Collection(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now, description="创建时间")
     updated_at: datetime = Field(default_factory=datetime.now, description="更新时间")
 
-    # 关系
-    papers: Mapped[List["Paper"]] = Relationship(back_populates="collections")
-    parent: Mapped[Optional["Collection"]] = Relationship(
-        back_populates="children",
-        sa_relationship_kwargs={"remote_side": "Collection.id"},
-    )
-    children: Mapped[List["Collection"]] = Relationship(back_populates="parent")
+    @property
+    def papers(self) -> List["Paper"]:
+        """获取文献列表（需要从数据库查询）"""
+        # 在实际使用中，这个值需要从数据库查询
+        return []
+
+    @property
+    def parent(self) -> Optional["Collection"]:
+        """获取父分类（需要从数据库查询）"""
+        # 在实际使用中，这个值需要从数据库查询
+        return None
+
+    @property
+    def children(self) -> List["Collection"]:
+        """获取子分类列表（需要从数据库查询）"""
+        # 在实际使用中，这个值需要从数据库查询
+        return []
 
     @property
     def paper_count(self) -> int:

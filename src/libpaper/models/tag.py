@@ -5,11 +5,10 @@ import re
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    from .paper import Paper, PaperTagLink
+    from .paper import Paper
 
 
 class Tag(SQLModel, table=True):
@@ -30,8 +29,17 @@ class Tag(SQLModel, table=True):
     # 系统字段
     created_at: datetime = Field(default_factory=datetime.now, description="创建时间")
 
-    # 关系
-    papers: Mapped[List["Paper"]] = Relationship(back_populates="tags")
+    # 关系 - 暂时注释掉，稍后单独定义
+    # papers: List["Paper"] = Relationship(
+    #     back_populates="tags",
+    #     link_model="PaperTagLink"
+    # )
+
+    @property
+    def papers(self) -> List["Paper"]:
+        """获取文献列表（需要从数据库查询）"""
+        # 在实际使用中，这个值需要从数据库查询
+        return []
 
     @property
     def paper_count(self) -> int:

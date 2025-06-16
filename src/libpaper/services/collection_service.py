@@ -19,70 +19,68 @@ class CollectionService:
         self.config = config
         self.db = Database(config.get_database_path())
 
-    async def initialize(self) -> None:
+    def initialize(self) -> None:
         """初始化服务"""
-        await self.db.create_tables()
+        self.db.create_tables()
 
-    async def create_collection(
+    def create_collection(
         self,
         name: str,
         description: Optional[str] = None,
         parent_id: Optional[UUID] = None,
     ) -> Collection:
-        """
-        创建新分类
+        """创建分类
 
         Args:
-          name: 分类名称
-          description: 分类描述
-          parent_id: 父分类ID
+            name: 分类名称
+            description: 分类描述（可选）
+            parent_id: 父分类ID（可选）
 
         Returns:
-          创建的分类对象
+            创建的分类对象
+
+        Raises:
+            ValueError: 参数验证失败
         """
         collection = Collection(name=name, description=description, parent_id=parent_id)
+        return self.db.create_collection(collection)
 
-        return await self.db.create_collection(collection)
-
-    async def get_collection(
+    def get_collection(
         self, collection_id: UUID, with_relations: bool = True
     ) -> Optional[Collection]:
-        """
-        获取分类
+        """获取分类
 
         Args:
-          collection_id: 分类ID
-          with_relations: 是否加载关联数据
+            collection_id: 分类ID
+            with_relations: 是否加载关联数据
 
         Returns:
-          分类对象或 None
+            分类对象或 None
         """
-        return await self.db.get_collection_by_id(collection_id, with_relations)
+        return self.db.get_collection_by_id(collection_id, with_relations)
 
-    async def update_collection(
+    def update_collection(
         self,
         collection_id: UUID,
         name: Optional[str] = None,
         description: Optional[str] = None,
         parent_id: Optional[UUID] = None,
     ) -> Optional[Collection]:
-        """
-        更新分类信息
+        """更新分类信息
 
         Args:
-          collection_id: 分类ID
-          name: 新名称
-          description: 新描述
-          parent_id: 新父分类ID
+            collection_id: 分类ID
+            name: 新名称
+            description: 新描述
+            parent_id: 新父分类ID
 
         Returns:
-          更新后的分类对象或 None
+            更新后的分类对象或 None
         """
-        collection = await self.db.get_collection_by_id(collection_id)
+        collection = self.db.get_collection_by_id(collection_id)
         if not collection:
             return None
 
-        # 更新字段
         if name is not None:
             collection.name = name
         if description is not None:
@@ -90,61 +88,55 @@ class CollectionService:
         if parent_id is not None:
             collection.parent_id = parent_id
 
-        return await self.db.update_collection(collection)
+        return self.db.update_collection(collection)
 
-    async def delete_collection(self, collection_id: UUID) -> bool:
-        """
-        删除分类
-
-        Args:
-          collection_id: 分类ID
-
-        Returns:
-          是否删除成功
-        """
-        return await self.db.delete_collection(collection_id)
-
-    async def list_collections(self, with_relations: bool = True) -> List[Collection]:
-        """
-        列出所有分类
+    def delete_collection(self, collection_id: UUID) -> bool:
+        """删除分类
 
         Args:
-          with_relations: 是否加载关联数据
+            collection_id: 分类ID
 
         Returns:
-          分类列表
+            是否删除成功
         """
-        return await self.db.get_all_collections(with_relations)
+        return self.db.delete_collection(collection_id)
 
-    async def get_root_collections(
-        self, with_relations: bool = True
-    ) -> List[Collection]:
-        """
-        获取根分类（没有父分类的分类）
+    def list_collections(self, with_relations: bool = True) -> List[Collection]:
+        """列出所有分类
 
         Args:
-          with_relations: 是否加载关联数据
+            with_relations: 是否加载关联数据
 
         Returns:
-          根分类列表
+            分类列表
         """
-        all_collections = await self.db.get_all_collections(with_relations)
-        return [c for c in all_collections if c.is_root()]
+        return self.db.get_all_collections(with_relations)
 
-    async def get_child_collections(
+    def get_root_collections(self, with_relations: bool = True) -> List[Collection]:
+        """获取根分类（没有父分类的分类）
+
+        Args:
+            with_relations: 是否加载关联数据
+
+        Returns:
+            根分类列表
+        """
+        all_collections = self.db.get_all_collections(with_relations)
+        return [c for c in all_collections if c.parent_id is None]
+
+    def get_child_collections(
         self, parent_id: UUID, with_relations: bool = True
     ) -> List[Collection]:
-        """
-        获取子分类
+        """获取子分类
 
         Args:
-          parent_id: 父分类ID
-          with_relations: 是否加载关联数据
+            parent_id: 父分类ID
+            with_relations: 是否加载关联数据
 
         Returns:
-          子分类列表
+            子分类列表
         """
-        all_collections = await self.db.get_all_collections(with_relations)
+        all_collections = self.db.get_all_collections(with_relations)
         return [c for c in all_collections if c.parent_id == parent_id]
 
     def build_collection_tree(self, collections: List[Collection]) -> Dict[str, Any]:
@@ -178,6 +170,6 @@ class CollectionService:
 
         return tree
 
-    async def close(self) -> None:
+    def close(self) -> None:
         """关闭服务"""
-        await self.db.close()
+        self.db.close()

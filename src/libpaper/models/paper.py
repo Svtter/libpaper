@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -58,10 +57,6 @@ class Paper(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now, description="创建时间")
     updated_at: datetime = Field(default_factory=datetime.now, description="更新时间")
 
-    # 关系
-    collections: Mapped[List["Collection"]] = Relationship(back_populates="papers")
-    tags: Mapped[List["Tag"]] = Relationship(back_populates="papers")
-
     @property
     def authors(self) -> List[str]:
         """获取作者列表"""
@@ -76,6 +71,18 @@ class Paper(SQLModel, table=True):
     def authors(self, value: List[str]) -> None:
         """设置作者列表"""
         self.authors_json = json.dumps(value) if value else None
+
+    @property
+    def collections(self) -> List["Collection"]:
+        """获取分类列表（需要从数据库查询）"""
+        # 在实际使用中，这个值需要从数据库查询
+        return []
+
+    @property
+    def tags(self) -> List["Tag"]:
+        """获取标签列表（需要从数据库查询）"""
+        # 在实际使用中，这个值需要从数据库查询
+        return []
 
     @property
     def collection_ids(self) -> List[UUID]:

@@ -1,81 +1,83 @@
-import asyncio
+"""LibPaper CLI 主入口"""
+
 from pathlib import Path
-from typing import Optional
 
 import click
 
-from ..services import CollectionService, PaperService, TagService
+from ..services.collection_service import CollectionService
+from ..services.paper_service import PaperService
+from ..services.tag_service import TagService
 from ..storage.config import Config
-from .commands import collection, paper, stats, tag
+from ..storage.database import Database
+from ..storage.file_manager import FileManager
+from .commands.collection import collection_commands
+from .commands.paper import paper_commands
+from .commands.stats import stats_commands
+from .commands.tag import tag_commands
 
 
 @click.group()
 @click.option(
     "--config-path",
-    type=click.Path(exists=False, path_type=Path),
-    help="配置文件路径 (默认: ~/.libpaper/config.yaml)",
+    type=click.Path(),
+    help="配置文件路径",
 )
 @click.pass_context
-def cli(ctx: click.Context, config_path: Optional[Path]):
-    """
-    LibPaper - 文献管理工具
+def cli(ctx, config_path):
+    """LibPaper - 研究文献管理工具"""
+    ctx.ensure_object(dict)
 
-    一个轻量级的研究文献管理工具，支持 PDF 文件存储、分类和标签管理。
-    """
     # 加载配置
     if config_path:
-        config = Config.load(str(config_path))
+        config = Config.load(Path(config_path))
     else:
         config = Config.load()
 
-    # 将配置存储在上下文中
-    ctx.ensure_object(dict)
     ctx.obj["config"] = config
 
 
 @cli.command()
 @click.pass_context
-def init(ctx: click.Context):
-    """初始化 LibPaper 环境"""
+def init(ctx):
+    """初始化 LibPaper"""
+    config = ctx.obj["config"]
 
-    async def _init():
-        config = ctx.obj["config"]
+    def _init():
+        """内部初始化函数"""
+        # 创建服务实例
+        db = Database(config.get_database_path())
+        file_manager = FileManager(config)
 
-        # 初始化服务
-        paper_service = PaperService(config)
+        paper_service = PaperService(db, file_manager)
         collection_service = CollectionService(config)
         tag_service = TagService(config)
 
-        try:
-            await paper_service.initialize()
-            await collection_service.initialize()
-            await tag_service.initialize()
+        # 初始化服务
+        paper_service.initialize()
+        collection_service.initialize()
+        tag_service.initialize()
 
-            click.echo(click.style("✓ LibPaper 初始化完成", fg="green"))
-            click.echo(f"数据库路径: {config.get_database_path()}")
-            click.echo(f"存储路径: {config.get_storage_path()}")
+        click.echo("✅ LibPaper 初始化完成!")
 
-        finally:
-            await paper_service.close()
-            await collection_service.close()
-            await tag_service.close()
+        # 关闭服务
+        paper_service.close()
+        collection_service.close()
+        tag_service.close()
 
-    asyncio.run(_init())
+    _init()
 
 
 @cli.command()
-@click.pass_context
-def version(ctx: click.Context):
+def version():
     """显示版本信息"""
-    click.echo("LibPaper v1.0.0")
-    click.echo("一个轻量级的研究文献管理工具")
+    click.echo("LibPaper 0.1.0")
 
 
-# 添加子命令组
-cli.add_command(paper.paper)
-cli.add_command(collection.collection)
-cli.add_command(tag.tag)
-cli.add_command(stats.stats)
+# 注册子命令组
+cli.add_command(paper_commands, name="paper")
+cli.add_command(collection_commands, name="collection")
+cli.add_command(tag_commands, name="tag")
+cli.add_command(stats_commands, name="stats")
 
 
 if __name__ == "__main__":
