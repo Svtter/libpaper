@@ -2,13 +2,16 @@
 FastAPI application for LibPaper
 """
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .routers import papers_router, collections_router, tags_router
 from .dependencies import get_paper_service, get_collection_service, get_tag_service
 from .schemas import StatsResponse, OverviewStats, StorageStats
+from ..services.paper_service import PaperService
+from ..services.collection_service import CollectionService
+from ..services.tag_service import TagService
 
 # Create FastAPI app
 app = FastAPI(
