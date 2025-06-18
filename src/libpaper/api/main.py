@@ -52,30 +52,32 @@ async def health_check():
 
 
 @app.get("/stats", response_model=StatsResponse, tags=["stats"])
-async def get_stats():
+async def get_stats(
+    paper_service: PaperService = Depends(get_paper_service),
+    collection_service: CollectionService = Depends(get_collection_service),
+    tag_service: TagService = Depends(get_tag_service)
+):
     """Get system statistics"""
     try:
-        from .dependencies import get_paper_service, get_collection_service, get_tag_service
+        # Get actual statistics from services
+        papers = paper_service.list_papers(with_relations=False)
+        collections = collection_service.list_collections(with_relations=False)
+        tags = tag_service.list_tags(with_relations=False)
         
-        # Get services (this is a simplified approach)
-        # In a real implementation, you'd want to properly inject dependencies
-        paper_service = None
-        collection_service = None
-        tag_service = None
+        # Get storage statistics
+        storage_info = paper_service.get_storage_stats()
         
-        # For now, return mock data
-        # You would implement this properly with actual service calls
         storage_stats = StorageStats(
-            total_papers=0,
-            total_size=0,
-            total_size_formatted="0 B",
-            storage_path="/path/to/storage"
+            total_papers=len(papers),
+            total_size=storage_info.get("total_size", 0),
+            total_size_formatted=storage_info.get("total_size_formatted", "0 B"),
+            storage_path=storage_info.get("storage_path", "")
         )
         
         overview_stats = OverviewStats(
-            total_papers=0,
-            total_collections=0,
-            total_tags=0,
+            total_papers=len(papers),
+            total_collections=len(collections),
+            total_tags=len(tags),
             storage_stats=storage_stats
         )
         
